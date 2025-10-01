@@ -1,0 +1,33 @@
+-- PROCEDURE: xp.sp_verificar_etl_xp_api_clients()
+
+-- DROP PROCEDURE IF EXISTS xp.sp_verificar_etl_xp_api_clients();
+
+CREATE OR REPLACE PROCEDURE xp.sp_verificar_etl_xp_api_clients(
+	)
+LANGUAGE 'plpgsql'
+AS $BODY$
+DECLARE
+    total_registros INTEGER;
+    dados_coletados BOOLEAN;
+BEGIN
+    SELECT COUNT(*) INTO total_registros
+    FROM   xp.unmasked_clients
+    WHERE "extractionDate" = CURRENT_DATE;
+
+    dados_coletados := total_registros > 0;
+
+    INSERT INTO logs_azure.unmasked_log_monitoramento_azure_function (tabela, existe_dado, mensagem, linhas_inseridas)
+    VALUES (
+	    'unmasked_clients',
+        dados_coletados,
+        CASE 
+            WHEN dados_coletados 
+            THEN 'Dados inseridos com sucesso no dia ' || CURRENT_DATE
+            ELSE 'Dados NÃO inseridos no dia ' || CURRENT_DATE
+        END,
+		total_registros
+    );
+END;
+$BODY$;
+ALTER PROCEDURE xp.sp_verificar_etl_xp_api_clients()
+    OWNER TO netz_admin;
